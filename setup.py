@@ -23,8 +23,8 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name='BuzzPoemAlgoTrade',
-    version='0.01',
+    name='BuzzAlgoTrade',
+    version='0.0.1',
     description='Python Algorithmic Trading',
     long_description='Python library for backtesting stock trading strategies.',
     packages=[
