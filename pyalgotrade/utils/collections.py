@@ -139,3 +139,6 @@ class ListDeque(object):
 
     def __getitem__(self, key):
         return self.__values[key]
+    
+    def remove(self, index):
+        del self.__values[index]

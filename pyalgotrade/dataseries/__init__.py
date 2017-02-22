@@ -143,3 +143,6 @@ class SequenceDataSeries(DataSeries):
 
     def getDateTimes(self):
         return self.__dateTimes.data()
+    
+    def removeValue(self, index):
+        self.__values.remove(index)
