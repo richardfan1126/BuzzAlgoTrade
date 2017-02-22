@@ -24,7 +24,7 @@ except ImportError:
 
 setup(
     name='BuzzAlgoTrade',
-    version='0.0.1',
+    version='0.0.2',
     description='Python Algorithmic Trading',
     long_description='Python library for backtesting stock trading strategies.',
     packages=[
