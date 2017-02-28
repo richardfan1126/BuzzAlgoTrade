@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-# PyAlgoTrade
-#
-# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
+# BuzzAlgoTrade
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
