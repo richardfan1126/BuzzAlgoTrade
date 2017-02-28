@@ -48,5 +48,5 @@ PyAlgoTrade is developed using Python 2.7 and depends on:
 You can install PyAlgoTrade using pip like this:
 
 ```
-pip install pyalgotrade
+pip install BuzzAlgoTrade
 ```
