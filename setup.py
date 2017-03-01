@@ -52,7 +52,7 @@ setup(
         "requests",
         "IbPy2",
         "pony",
-        "MySQL-python",
+        "mysqlclient",
     ],
     extras_require={
         'Scipy':  ["scipy"],
