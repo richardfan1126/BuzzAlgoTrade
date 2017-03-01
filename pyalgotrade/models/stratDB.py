@@ -1,7 +1,31 @@
-from decimal import Decimal
-from pony.orm import *
+from pony.orm import Database, db_session, PrimaryKey, Required, Optional, sql_debug
+from pony.orm.core import EntityMeta
+
+from pyalgotrade.models import obj
+
+import json
 
 db = Database("sqlite", "stratDB.sqlite", create_db=True)
+
+class StratDB():
+    def __init__(self, user, password, host, database):
+        self.db = Database("mysql", user = user, passwd = password, host = host, db = database)
+        sql_debug(False)
+        
+        attrs = {}
+        attrs['id'] = PrimaryKey(int, auto=True)
+        attrs['strategy'] = Optional(str)
+        attrs['symbol'] = Optional(str)
+        attrs['secType'] = Optional(str)
+        attrs['exchange'] = Optional(str)
+        attrs['expiry'] = Optional(str)
+        attrs['datetime'] = Optional(str)
+        attrs['action'] = Optional(str)
+        attrs['price'] = Optional(str)
+        attrs['expiry'] = Optional(str)
+        
+        self.TransRecord = EntityMeta('TransRecord', (self.db.Entity,), attrs)
+        self.db.generate_mapping(create_tables=True)
 
 class SignalRecordBCR(db.Entity):
     id = PrimaryKey(int, auto=True)
