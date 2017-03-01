@@ -51,6 +51,8 @@ setup(
         "python-dateutil",
         "requests",
         "IbPy2",
+        "pony",
+        "MySQL-python",
     ],
     extras_require={
         'Scipy':  ["scipy"],
