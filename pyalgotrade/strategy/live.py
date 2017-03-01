@@ -13,6 +13,12 @@ class IBTradeStrategy():
     feed_low = None
     feed_late = None
     
+    close_var = 2
+    server_time = None
+    last_time = None
+    early_check = False
+    early_buy = False
+    
     initParam = None
     db_username = None
     db_password = None
@@ -139,7 +145,7 @@ class IBTradeStrategy():
         self.__load_param()
         self.__connect_tws()
         self.__create_contract()
-        
+    
     def run(self):
         self.main_loop()
         

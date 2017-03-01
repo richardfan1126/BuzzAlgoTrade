@@ -1,6 +1,8 @@
 from pony.orm import Database, db_session, PrimaryKey, Required, Optional, sql_debug
 from pony.orm.core import EntityMeta
 
+from pyalgotrade.models import obj
+
 import json
 
 class InitParam():
@@ -88,11 +90,3 @@ class InitParam():
             return obj(return_record)
         else:
             return None
-
-class obj(object):
-    def __init__(self, d):
-        for a, b in d.items():
-            if isinstance(b, (list, tuple)):
-                setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
-            else:
-                setattr(self, a, obj(b) if isinstance(b, dict) else b)
