@@ -50,6 +50,7 @@ setup(
         "pytz",
         "python-dateutil",
         "requests",
+        "IbPy2",
     ],
     extras_require={
         'Scipy':  ["scipy"],

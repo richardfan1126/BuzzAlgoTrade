@@ -29,7 +29,6 @@ class IBTradeStrategy():
         try:
             utc = datetime.datetime.strptime(msg.date, '%Y%m%d  %H:%M:%S')
         except ValueError:
-            print 'price tick handler value error'
             return
     
         if msg.date[:8] != "finished":
@@ -56,6 +55,5 @@ class IBTradeStrategy():
         self.tws.reqIds(self.order_id)
     
         while 1:
-            # tws.reqCurrentTime()
             self.extract_time_handler()
             time.sleep(0.2)
