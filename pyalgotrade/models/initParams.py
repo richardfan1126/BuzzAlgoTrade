@@ -1,4 +1,4 @@
-from pony.orm import Database, db_session, PrimaryKey, Required, Optional, sql_debug
+from pony.orm import Database, db_session, PrimaryKey, Required, Optional, sql_debug, commit
 from pony.orm.core import EntityMeta
 
 from pyalgotrade.models import obj
@@ -7,7 +7,7 @@ import json
 
 class InitParam():
     def __init__(self, user, password, host, database):
-        self.db = Database("mysql", user = user, passwd = password, host = host, db = database)
+        self.db = Database("postgres", user = user, password = password, host = host, database = database)
         sql_debug(False)
         
         attrs = {}
