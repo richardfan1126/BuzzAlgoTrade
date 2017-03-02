@@ -52,7 +52,7 @@ setup(
         "requests",
         "IbPy2",
         "pony",
-        "mysqlclient",
+        "psycopg2",
     ],
     extras_require={
         'Scipy':  ["scipy"],
