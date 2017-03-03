@@ -3,13 +3,12 @@ import datetime, time, sys
 from ib.opt import Connection
 from ib.ext.Contract import Contract
 
+from pyalgotrade.strategy.base import BaseIBTradeStrategy
 from pyalgotrade.strategy import BacktestingStrategy
 from pyalgotrade.feed import ib_data_feed 
 from pyalgotrade.models.initParams import InitParam
 
-class IBTradeStrategy():
-    debug = False
-    
+class IBTradeStrategy(BaseIBTradeStrategy):
     main_loop_interval = 0.2
     
     feed = None
@@ -21,15 +20,12 @@ class IBTradeStrategy():
     server_time = None
     last_time = None
     early_check = False
-    early_buy = False
     
-    initParam = None
-    db_username = None
-    db_password = None
-    db_host = None
-    db_database = None
+    init_param = None
     
     contract = None
+    
+    strategy_class = None
     
     order_id = 1
     tracker_id = 1
@@ -39,50 +35,11 @@ class IBTradeStrategy():
     instrument_name = 'hsi'
     
     client_id = 1
-    current_stat= ''
-    symbol = ''
-    sec_type = ''
-    exchange = ''
-    expiry = ''
     currency = ''
     param_set_name = ''
     
     def __init__(self, **kwargs):
-        if 'client_id' in kwargs:
-            self.client_id = kwargs['client_id']
-        
-        if 'current_stat' in kwargs:
-            self.current_stat = kwargs['current_stat']
-        
-        if 'symbol' in kwargs:
-            self.symbol = kwargs['symbol']
-        
-        if 'sec_type' in kwargs:
-            self.sec_type = kwargs['sec_type']
-        
-        if 'exchange' in kwargs:
-            self.exchange = kwargs['exchange']
-        
-        if 'expiry' in kwargs:
-            self.expiry = kwargs['expiry']
-        
-        if 'currency' in kwargs:
-            self.currency = kwargs['currency']
-        
-        if 'param_set_name' in kwargs:
-            self.param_set_name = kwargs['param_set_name']
-        
-        if 'db_username' in kwargs:
-            self.db_username = kwargs['db_username']
-        
-        if 'db_password' in kwargs:
-            self.db_password = kwargs['db_password']
-        
-        if 'db_host' in kwargs:
-            self.db_host = kwargs['db_host']
-        
-        if 'db_database' in kwargs:
-            self.db_database = kwargs['db_database']
+        super(self.__class__, self).__init__(kwargs)
         
         self.tws = Connection.create(port = 7496, clientId = self.client_id)
         
@@ -90,6 +47,10 @@ class IBTradeStrategy():
         self.feed_high = ib_data_feed.IbDataFeed(self.feed_frequency)
         self.feed_low = ib_data_feed.IbDataFeed(self.feed_frequency)
         self.feed_late = ib_data_feed.IbDataFeed(self.feed_frequency)
+        
+        self.__load_param()
+        self.__connect_tws()
+        self.__create_contract()
     
     def historical_data_handler(self, msg):
         try:
@@ -201,7 +162,8 @@ class IBTradeStrategy():
                 print server_time.strftime('%Y-%m-%d %H:%M:%S')
             
             self.early_check=True
-#             init_strategy()
+            self.init_strategy()
+            
         elif server_time.minute == target_time.minute and server_time.second == 0:
             if self.debug:
                 print '00 interval'
@@ -214,9 +176,9 @@ class IBTradeStrategy():
                 self.early_buy = False
                 return
             
-#             init_strategy()
+            self.init_strategy()
 
-    def init_strategt(self):
+    def init_strategy(self):
         self.feed = ib_data_feed.IbDataFeed(60)
         self.feed_high = ib_data_feed.IbDataFeed(60)
         self.feed_low = ib_data_feed.IbDataFeed(60)
@@ -233,12 +195,55 @@ class IBTradeStrategy():
         time_now = datetime.datetime.now().strftime("%Y%m%d %H:%M:%S")
         self.tws.reqHistoricalData(self.tracker_id, c, time_now, "1 D", "1 min", "TRADES", 0, 1)
     
-    def prepare(self):
-        logging.basicConfig(level = logging.INFO, filename = self.current_stat + '_' + self.symbol + '_log.txt')
-        
-        self.__load_param()
-        self.__connect_tws()
-        self.__create_contract()
+    def run_strategy(self, early_bool):
+        if early_bool:
+            strategy = self.strategy_class(self.feed, self.instrument_name)
+            strategy_high = self.strategy_class(self.feed_high, self.instrument_name)
+            strategy_low = self.strategy_class(self.feed_low, self.instrument_name)
+            
+            if self.debug:
+                logging.info(server_time.time())
+                logging.info('original feed')
+            strat_check_result= strategy.run()
+            
+            if self.debug:
+                logging.info('high feed')
+            strat_check_result_high= strategy_high.run()
+            
+            if self.debug:
+                logging.info('low feed')
+            strat_check_result_low = strategy_low.run()
+            
+            if self.debug:
+                logging.info(
+                    'original check: ' + str(strat_check_result) + ' high feed check: ' + str(strat_check_result_high) + ' low feed check: ' + str(strat_check_result_low)
+                )
+                print 'run strategy'
+                print strat_check_result
+                print strat_check_result_high
+                print strat_check_result_low
+                print datetime.datetime.now()
+            
+            enterPos = EnterPosition()
+            enterPos.early_check(strat_check_result, strat_check_result_high, strat_check_result_low)
+            enterPos.run()
+    
+        else:
+            strategy_late = self.strategy_class(self.feed_late, self.instrument_name)
+            
+            if self.debug:
+                logging.info(server_time.time())
+    
+            strat_check_result_late = strategy_late.run()
+            
+            if self.debug:
+                print 'run strategy'
+                print strat_check_result_late
+                print datetime.datetime.now()
+            
+            enterPos = EnterPosition()
+            enterPos.late_check(strat_check_result_late)
+            enterPos.run()
     
     def run(self):
         self.main_loop()
