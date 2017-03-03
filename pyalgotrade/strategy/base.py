@@ -28,7 +28,7 @@ class BaseIBTradeStrategy():
     def __init_strat_db(self):
         self.strat_db = StratDB(self.db_username, self.db_password, self.db_host, self.db_database)
     
-    def pre_run(self):
+    def enter_position_pre_run(self):
         self.__long_pos = self.strat_db.getLongPos(self.current_stat, self.symbol, self.sec_type, self.exchange, self.expiry)
         
         if self.debug:
