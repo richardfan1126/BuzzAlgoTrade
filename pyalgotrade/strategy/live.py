@@ -8,6 +8,10 @@ from pyalgotrade.feed import ib_data_feed
 from pyalgotrade.models.initParams import InitParam
 
 class IBTradeStrategy():
+    debug = False
+    
+    main_loop_interval = 0.2
+    
     feed = None
     feed_high = None
     feed_low = None
@@ -28,6 +32,7 @@ class IBTradeStrategy():
     contract = None
     
     order_id = 1
+    tracker_id = 1
     
     feed_frequency = 60
     min_feed_required = 54
@@ -90,16 +95,59 @@ class IBTradeStrategy():
         try:
             utc = datetime.datetime.strptime(msg.date, '%Y%m%d  %H:%M:%S')
         except ValueError:
+            if self.debug:
+                print 'price tick handler value error'
             return
     
         if msg.date[:8] != "finished":
             date = utc.strftime("%Y-%m-%d %H:%M:%S")
-            if utc.time()!=server_time.time():
+            server_time_check = self.server_time.replace(second = 0, microsecond = 0)
+            bar_time_check = utc.replace(second = 0,microsecond = 0)
+            if bar_time_check.time() != server_time_check.time():
+                if self.early_check:
+                    self.feed.addBar(date, msg.open, msg.close, msg.low, msg.high, msg.volume)
+                    self.feed_high.addBar(date, msg.open, msg.close, msg.low, msg.high, msg.volume)
+                    self.feed_low.addBar(date, msg.open, msg.close, msg.low, msg.high, msg.volume)
+                else:
+                    self.feed_late.addBar(date, msg.open, msg.close, msg.low, msg.high, msg.volume)
+            elif bar_time_check.time() == server_time_check.time() and self.early_check:
+                highClose = msg.close + self.close_var
+                lowClose = msg.close - self.close_var
+                if highClose > msg.high:
+                    newHigh = highClose
+                else:
+                    newHigh = msg.high
+                if lowClose < msg.low:
+                    newLow = lowClose
+                else:
+                    newLow = msg.low
+                    
                 self.feed.addBar(date, msg.open, msg.close, msg.low, msg.high, msg.volume)
+                self.feed_high.addBar(date, msg.open, highClose, msg.low, newHigh, msg.volume)
+                self.feed_low.addBar(date, msg.open, lowClose, newLow, msg.high, msg.volume)
         else:
-            self.feed.finishAddBar(self.instrument_name)
-            if self.feed.get_count() >= self.min_feed_required:
-                self.run()
+            if self.early_check:
+                self.feed.finishAddBar(self.instrument_name)
+                self.feed_high.finishAddBar(self.instrument_name)
+                self.feed_low.finishAddBar(self.instrument_name)
+                
+                if self.debug:
+                    print 'feed count'
+                    print self.feed.get_count()
+                    print self.feed_high.get_count()
+                    print self.feed_low.get_count()
+                    
+                if feed.get_count() >= self.min_feed_required:
+                    self.run_strategy(True)
+            else:
+                self.feed_late.finishAddBar(self.instrument_name)
+                
+                if self.debug:
+                    print 'feed count'
+                    print self.feed_late.get_count()
+                    
+                if self.feed_late.get_count() >= self.min_feed_required:
+                    self.run_strategy(False)
     
     def __load_param(self):
         self.init_param = InitParam(self.db_username, self.db_password, self.db_host, self.db_database)
@@ -139,8 +187,54 @@ class IBTradeStrategy():
         self.contract.m_expiry = self.expiry
         self.contract.m_currency = self.currency
     
+    def __check_server_time(self):
+        server_time = datetime.datetime.now()
+    
+        if self.last_time == None:
+            self.last_time = server_time
+    
+        target_time = self.last_time + datetime.timedelta(minutes=1)
+    
+        if server_time.minute == (target_time - datetime.timedelta(minutes = 1)).minute and server_time.second==58 and not self.early_check:
+            if self.debug:
+                print '58s interval'
+                print server_time.strftime('%Y-%m-%d %H:%M:%S')
+            
+            self.early_check=True
+#             init_strategy()
+        elif server_time.minute == target_time.minute and server_time.second == 0:
+            if self.debug:
+                print '00 interval'
+                print server_time.strftime('%Y-%m-%d %H:%M:%S')
+            
+            self.last_time = server_time
+            self.early_check = False
+            
+            if self.early_buy:
+                self.early_buy = False
+                return
+            
+#             init_strategy()
+
+    def init_strategt(self):
+        self.feed = ib_data_feed.IbDataFeed(60)
+        self.feed_high = ib_data_feed.IbDataFeed(60)
+        self.feed_low = ib_data_feed.IbDataFeed(60)
+        self.feed_late = ib_data_feed.IbDataFeed(60)
+        
+        c = Contract()
+        
+        c.m_symbol = self.symbol
+        c.m_secType= self.sec_type
+        c.m_exchange = self.exchange
+        c.m_expiry = self.exchange
+        
+        now = datetime.datetime.now()
+        time_now = datetime.datetime.now().strftime("%Y%m%d %H:%M:%S")
+        self.tws.reqHistoricalData(self.tracker_id, c, time_now, "1 D", "1 min", "TRADES", 0, 1)
+    
     def prepare(self):
-        logging.basicConfig(level = logging.INFO, filename = self.current_stat + '_' + SYMBOL + '_log.txt')
+        logging.basicConfig(level = logging.INFO, filename = self.current_stat + '_' + self.symbol + '_log.txt')
         
         self.__load_param()
         self.__connect_tws()
@@ -153,5 +247,5 @@ class IBTradeStrategy():
         self.tws.reqIds(self.order_id)
     
         while 1:
-            self.extract_time_handler()
-            time.sleep(0.2)
+            self.__check_server_time()
+            time.sleep(self.main_loop_interval)
